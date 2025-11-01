@@ -21,17 +21,24 @@ export const AuthProvider = ({ children }) => {
             if (token && user) {
                 setCurrentUser(JSON.parse(user));
                 setIsAuthenticated(true);
+            } else {
+                // *** FIX APPLIED HERE: Ensure state is false if no token is found ***
+                setCurrentUser(null);
+                setIsAuthenticated(false);
             }
         } catch (error) {
             console.error("Failed to parse user from localStorage", error);
-            // Clear bad data
+            // Clear bad data and reset state
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            setCurrentUser(null);
+            setIsAuthenticated(false);
         }
+        // This is the signal for ProtectedRoute to stop showing "Loading"
         setLoading(false);
     }, []);
 
-    // Login function (No changes needed here)
+    // Login function (unchanged)
     const login = async (email, password) => {
         try {
             const response = await loginUser({ email, password });
@@ -56,25 +63,21 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Corrected Register function
+    // Register function (unchanged)
     const register = async (name, email, password, description, headline, summary, age) => {
         try {
-            // Prepare the payload object exactly as the backend expects
             const payload = {
                 name,
                 email,
                 password,
-                description, // '0' or '1'
+                description,
                 headline,
                 summary,
-                // Use null for empty age, or the parsed integer
                 age: age === '' ? null : parseInt(age) 
             };
 
-            // *** Use the imported registerUser API function ***
             const response = await registerUser(payload); 
             
-            // Assuming registerUser returns a 201 success without a token/user body
             if (response.status === 201) {
                  return { success: true };
             } else {
@@ -83,7 +86,6 @@ export const AuthProvider = ({ children }) => {
             
         } catch (error) {
             console.error("Registration failed:", error);
-            // Return the specific error message from the backend
             return { 
                 success: false, 
                 error: error.response?.data?.error || 'Network error occurred.' 
@@ -91,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Logout function (No changes needed here)
+    // Logout function (unchanged)
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -111,12 +113,13 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {/* The ProtectedRoute component handles the redirect only when loading is false */}
+            {!loading && children} 
         </AuthContext.Provider>
     );
 };
 
-// 3. Create the useAuth hook (No changes needed here)
+// 3. Create the useAuth hook
 export const useAuth = () => {
     return useContext(AuthContext);
 };
